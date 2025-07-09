@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Awesome Blog</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -61,7 +60,6 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Header -->
     <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg rounded-b-lg">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-3xl font-bold">My Blog</h1>
@@ -72,19 +70,15 @@
         </div>
     </header>
 
-    <!-- Main Content Area -->
     <main class="flex-grow container mx-auto p-4 md:p-8">
 
-        <!-- Blog View Section -->
         <section id="blogView" class="mb-8">
             <h2 class="text-4xl font-extrabold text-gray-900 mb-8 text-center">Latest Posts</h2>
             <div id="blogPostsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Blog posts will be loaded here dynamically -->
                 <div id="loadingBlogPosts" class="col-span-full text-center text-gray-500 text-lg">Loading blog posts...</div>
             </div>
         </section>
 
-        <!-- Admin Login Section -->
         <section id="adminLoginSection" class="hidden bg-white p-6 md:p-8 rounded-lg shadow-xl border border-gray-200 max-w-md mx-auto">
             <h2 class="text-4xl font-extrabold text-gray-900 mb-8 text-center">Admin Login</h2>
             <form id="loginForm" class="space-y-4">
@@ -102,18 +96,15 @@
             </form>
         </section>
 
-        <!-- Admin Panel Section -->
         <section id="adminPanel" class="hidden bg-white p-6 md:p-8 rounded-lg shadow-xl border border-gray-200">
             <h2 class="text-4xl font-extrabold text-gray-900 mb-8 text-center">Admin Panel</h2>
 
-            <!-- User ID Display -->
             <div class="mb-6 bg-blue-50 p-4 rounded-lg text-blue-800 border border-blue-200">
                 <p class="font-semibold">Your User ID (for Firestore access):</p>
                 <p id="currentUserId" class="break-all text-sm mt-1"></p>
                 <p class="text-xs text-blue-600 mt-2">This ID is used to manage your private data in Firestore.</p>
             </div>
 
-            <!-- Post Form -->
             <div class="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-4" id="postFormTitle">Add New Post</h3>
                 <form id="postForm" class="space-y-4">
@@ -143,17 +134,14 @@
                 </form>
             </div>
 
-            <!-- Post List for Admin -->
             <div class="p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <h3 class="text-2xl font-semibold text-gray-800 mb-4">Your Posts</h3>
                 <div id="adminPostsList" class="space-y-4">
-                    <!-- Admin posts will be loaded here dynamically -->
                     <div id="loadingAdminPosts" class="text-center text-gray-500 text-lg">Loading your posts...</div>
                 </div>
             </div>
         </section>
 
-        <!-- Custom Modal for Alerts/Confirmations -->
         <div id="customModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 hidden">
             <div class="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full text-center">
                 <h3 id="modalTitle" class="text-xl font-bold mb-4 text-gray-900"></h3>
@@ -167,12 +155,10 @@
 
     </main>
 
-    <!-- Footer -->
     <footer class="bg-gray-800 text-white p-4 text-center rounded-t-lg mt-8">
         <p>&copy; 2025 My Awesome Blog. All rights reserved.</p>
     </footer>
 
-    <!-- Firebase SDKs -->
     <script type="module">
         // Firebase imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -188,9 +174,9 @@
         let app;
         let db;
         let auth;
-        let userId = 'anonymous'; // Default to anonymous until authenticated
+        let userId = 'anonymous'; // Default to 'anonymous' initially, until auth state is known
         let isAuthReady = false; // Flag to indicate if auth state has been checked
-        let isAdminLoggedIn = false; // Flag for admin panel access
+        let isAdminLoggedIn = false; // Flag for client-side admin panel access
 
         // DOM Elements
         const blogView = document.getElementById('blogView');
@@ -269,6 +255,22 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
 
+                // Listen for auth state changes to set userId and isAuthReady
+                onAuthStateChanged(auth, (user) => {
+                    console.log("onAuthStateChanged fired. User:", user);
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Current user ID (from onAuthStateChanged):", userId);
+                    } else {
+                        // User is null if sign-in failed or no session exists
+                        userId = 'unauthenticated';
+                        console.log("User is unauthenticated (from onAuthStateChanged).");
+                    }
+                    currentUserIdDisplay.textContent = userId;
+                    isAuthReady = true; // Auth state has been determined
+                    setupFirestoreListeners(); // Set up listeners once auth is ready
+                });
+
                 // Attempt to sign in with custom token first
                 if (initialAuthToken) {
                     try {
@@ -277,7 +279,7 @@
                         console.log("Signed in with custom token successfully.");
                     } catch (tokenError) {
                         console.error("Error signing in with custom token:", tokenError);
-                        showModal('Authentication Error', `Failed to sign in with custom token: ${tokenError.message}. Attempting anonymous sign-in.`);
+                        showModal('Authentication Error', `Failed to sign in with custom token: ${tokenError.message}. Attempting anonymous sign-in as fallback.`);
                         // Fallback to anonymous sign-in if custom token fails
                         try {
                             console.log("Attempting anonymous sign-in as fallback...");
@@ -285,6 +287,7 @@
                             console.log("Signed in anonymously as fallback.");
                         } catch (anonFallbackError) {
                             console.error("Error signing in anonymously as fallback:", anonFallbackError);
+                            // Set userId to an error state if even anonymous sign-in fails
                             userId = 'anonymous_auth_failed';
                             showModal('Authentication Error', `Failed to sign in anonymously: ${anonFallbackError.message}`);
                         }
@@ -302,24 +305,6 @@
                     }
                 }
 
-                // Listen for auth state changes to set userId and isAuthReady
-                onAuthStateChanged(auth, (user) => {
-                    console.log("onAuthStateChanged fired. User:", user);
-                    if (user) {
-                        userId = user.uid;
-                        console.log("Current user ID:", userId);
-                    } else {
-                        // This case should ideally not be hit if anonymous sign-in worked
-                        // but provides a safety net if user becomes null for some reason.
-                        userId = 'unauthenticated';
-                        console.log("User is unauthenticated.");
-                    }
-                    currentUserIdDisplay.textContent = userId;
-                    isAuthReady = true;
-                    // Once auth is ready, set up listeners
-                    setupFirestoreListeners();
-                });
-
             } catch (error) {
                 console.error("Error initializing Firebase:", error);
                 showModal('Error', `Failed to initialize Firebase: ${error.message}`);
@@ -330,18 +315,13 @@
          * Sets up real-time listeners for blog posts in Firestore.
          */
         function setupFirestoreListeners() {
-            console.log("Attempting to setup Firestore listeners. db:", !!db, "isAuthReady:", isAuthReady, "userId:", userId);
-            if (!db || !isAuthReady) {
-                console.log("Firestore or Auth not ready, skipping listener setup.");
+            console.log("Attempting to setup Firestore listeners. DB:", !!db, "Auth Ready:", isAuthReady, "User ID:", userId);
+            if (!db || !isAuthReady || userId === 'unauthenticated' || userId === 'anonymous_auth_failed') {
+                console.log("Firestore or Auth not ready or user unauthenticated/failed, skipping listener setup.");
+                loadingBlogPosts.textContent = 'Authentication required or failed to load posts.';
+                loadingAdminPosts.textContent = 'Authentication required or failed to load your posts.';
                 return;
             }
-            if (userId === 'anonymous_auth_failed' || userId === 'unauthenticated') {
-                console.log("Authentication failed or user is unauthenticated, skipping Firestore listeners.");
-                loadingBlogPosts.textContent = 'Authentication failed. Cannot load posts.';
-                loadingAdminPosts.textContent = 'Authentication failed. Cannot load your posts.';
-                return;
-            }
-
 
             // Public posts for blog view
             const publicPostsCollectionRef = collection(db, `artifacts/${appId}/public/data/posts`);
@@ -363,19 +343,14 @@
             });
 
             // Private posts for admin panel (filtered by userId)
-            // IMPORTANT: Adding a 'where' clause here to filter by authorId directly in the query.
-            // This aligns better with security rules that might enforce user-specific access.
             const adminPostsCollectionRef = collection(db, `artifacts/${appId}/public/data/posts`);
-            // Only set up admin listener if the user is authenticated and potentially an admin
-            // The `where` clause ensures only posts by the current Firebase userId are fetched.
-            // The `isAdminLoggedIn` flag will control UI visibility and write access.
             const q = query(adminPostsCollectionRef, where("authorId", "==", userId));
             console.log("Setting up admin posts listener for path:", adminPostsCollectionRef.path, "with userId filter:", userId);
-            onSnapshot(q, (snapshot) => { // Listen to the filtered query
+            onSnapshot(q, (snapshot) => {
                 console.log("Admin posts snapshot received for userId:", userId);
                 const adminPosts = [];
                 snapshot.forEach(doc => {
-                    adminPosts.push({ id: doc.id, ...doc.data() }); // No need for manual filtering here
+                    adminPosts.push({ id: doc.id, ...doc.data() });
                 });
                 // Sort posts by timestamp in descending order
                 adminPosts.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
@@ -473,8 +448,28 @@
          */
         async function handlePostSubmission(e) {
             e.preventDefault();
-            if (!db || !auth.currentUser || !isAdminLoggedIn) { // Added isAdminLoggedIn check
-                showModal('Access Denied', 'You must be logged in as an admin to perform this action.');
+
+            console.log("--- handlePostSubmission called ---");
+            console.log("Firebase DB initialized:", !!db);
+            console.log("Firebase Auth Ready (isAuthReady):", isAuthReady);
+            console.log("Current Firebase User (auth.currentUser):", auth.currentUser);
+            console.log("Admin Logged In (client-side):", isAdminLoggedIn);
+            console.log("Derived User ID (userId):", userId);
+            console.log("-----------------------------------");
+
+            // Check conditions for allowing post submission
+            if (!db || !isAuthReady || userId === 'anonymous' || userId === 'anonymous_auth_failed' || userId === 'unauthenticated' || !isAdminLoggedIn) {
+                let message = 'You must be logged in as an admin to perform this action.';
+                if (!db) {
+                    message = 'Database is not initialized.';
+                } else if (!isAuthReady) {
+                    message = 'Authentication is still loading. Please try again in a moment.';
+                } else if (userId === 'anonymous' || userId === 'anonymous_auth_failed' || userId === 'unauthenticated') {
+                    message = 'An authenticated session is required. Please refresh the page or try logging in again.';
+                } else if (!isAdminLoggedIn) {
+                    message = 'You are not logged in to the admin panel.';
+                }
+                showModal('Access Denied', message);
                 return;
             }
 
@@ -532,7 +527,7 @@
          * @param {string} postId - The ID of the post to edit.
          */
         async function editPost(postId) {
-            if (!db || !auth.currentUser || !isAdminLoggedIn) { // Added auth.currentUser check
+            if (!db || userId === 'anonymous' || userId === 'anonymous_auth_failed' || userId === 'unauthenticated' || !isAdminLoggedIn) {
                 showModal('Access Denied', 'You must be logged in as an admin to perform this action.');
                 return;
             }
@@ -570,7 +565,7 @@
          * @param {string} postId - The ID of the post to delete.
          */
         async function deletePost(postId) {
-            if (!db || !auth.currentUser || !isAdminLoggedIn) { // Added auth.currentUser check
+            if (!db || userId === 'anonymous' || userId === 'anonymous_auth_failed' || userId === 'unauthenticated' || !isAdminLoggedIn) {
                 showModal('Access Denied', 'You must be logged in as an admin to perform this action.');
                 return;
             }
@@ -664,7 +659,7 @@
                 adminPanel.classList.remove('hidden');
                 showModal('Login Successful', 'Welcome to the Admin Panel!');
                 // Re-setup listeners to ensure admin posts are filtered correctly
-                // (though onAuthStateChanged already handles this, good to be explicit for clarity)
+                // This call is generally safe as setupFirestoreListeners checks auth status internally.
                 setupFirestoreListeners();
             } else {
                 showModal('Login Failed', 'Invalid username or password.');
