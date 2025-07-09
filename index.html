@@ -264,6 +264,13 @@
          */
         async function initializeFirebase() {
             try {
+                // Validate firebaseConfig before initializing
+                if (!firebaseConfig || !firebaseConfig.projectId) {
+                    console.error("Firebase initialization error: 'projectId' not found in firebaseConfig.");
+                    showModal('Firebase Configuration Error', 'Firebase project ID is missing. Please ensure your Firebase project is correctly set up in the environment.');
+                    return; // Stop initialization if config is invalid
+                }
+
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
