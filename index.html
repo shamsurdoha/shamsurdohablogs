@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Awesome Blog</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        .blog-post-content {
+            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+        }
+        .markdown-content {
+            /* Basic styling for markdown-like content */
+            line-height: 1.6;
+        }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            font-weight: bold;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #1f2937;
+        }
+        .markdown-content h1 { font-size: 2.25rem; }
+        .markdown-content h2 { font-size: 1.875rem; }
+        .markdown-content h3 { font-size: 1.5rem; }
+        .markdown-content p {
+            margin-bottom: 1em;
+        }
+        .markdown-content ul, .markdown-content ol {
+            margin-left: 1.5em;
+            margin-bottom: 1em;
+            list-style-type: disc;
+        }
+        .markdown-content ol {
+            list-style-type: decimal;
+        }
+        .markdown-content a {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+        .markdown-content pre {
+            background-color: #e5e7eb;
+            padding: 1em;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-bottom: 1em;
+        }
+        .markdown-content code {
+            font-family: monospace;
+            background-color: #e5e7eb;
+            padding: 0.2em 0.4em;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg rounded-b-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold">My Blog</h1>
+            <nav>
+                <button id="viewBlogBtn" class="bg-white text-blue-700 px-4 py-2 rounded-full shadow-md hover:bg-blue-100 transition duration-300 mr-2">View Blog</button>
+                <button id="adminLoginBtn" class="bg-white text-blue-700 px-4 py-2 rounded-full shadow-md hover:bg-blue-100 transition duration-300">Admin Panel</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow container mx-auto p-4 md:p-8">
+
+        <!-- Blog View Section -->
+        <section id="blogView" class="mb-8">
+            <h2 class="text-4xl font-extrabold text-gray-900 mb-8 text-center">Latest Posts</h2>
+            <div id="blogPostsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Blog posts will be loaded here dynamically -->
+                <div id="loadingBlogPosts" class="col-span-full text-center text-gray-500 text-lg">Loading blog posts...</div>
+            </div>
+        </section>
+
+        <!-- Admin Login Section -->
+        <section id="adminLoginSection" class="hidden bg-white p-6 md:p-8 rounded-lg shadow-xl border border-gray-200 max-w-md mx-auto">
+            <h2 class="text-4xl font-extrabold text-gray-900 mb-8 text-center">Admin Login</h2>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" id="username" class="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter username" required>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" class="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white px-6 py-3 rounded-full shadow-md hover:bg-blue-700 transition duration-300">
+                    Login
+                </button>
+            </form>
+        </section>
+
+        <!-- Admin Panel Section -->
+        <section id="adminPanel" class="hidden bg-white p-6 md:p-8 rounded-lg shadow-xl border border-gray-200">
+            <h2 class="text-4xl font-extrabold text-gray-900 mb-8 text-center">Admin Panel</h2>
+
+            <!-- User ID Display -->
+            <div class="mb-6 bg-blue-50 p-4 rounded-lg text-blue-800 border border-blue-200">
+                <p class="font-semibold">Your User ID (for Firestore access):</p>
+                <p id="currentUserId" class="break-all text-sm mt-1"></p>
+                <p class="text-xs text-blue-600 mt-2">This ID is used to manage your private data in Firestore.</p>
+            </div>
+
+            <!-- Post Form -->
+            <div class="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4" id="postFormTitle">Add New Post</h3>
+                <form id="postForm" class="space-y-4">
+                    <div>
+                        <label for="postTitle" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                        <input type="text" id="postTitle" class="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter post title" required>
+                    </div>
+                    <div>
+                        <label for="postContent" class="block text-sm font-medium text-gray-700 mb-1">Content</label>
+                        <textarea id="postContent" rows="10" class="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Write your blog post content here..." required></textarea>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button type="button" id="generateContentBtn" class="flex-shrink-0 bg-purple-600 text-white px-6 py-3 rounded-full shadow-md hover:bg-purple-700 transition duration-300 flex items-center justify-center">
+                            <svg id="generateSpinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Generate Content (AI)
+                        </button>
+                        <button type="submit" id="savePostBtn" class="flex-grow bg-blue-600 text-white px-6 py-3 rounded-full shadow-md hover:bg-blue-700 transition duration-300">
+                            Publish Post
+                        </button>
+                        <button type="button" id="cancelEditBtn" class="flex-shrink-0 bg-gray-400 text-white px-6 py-3 rounded-full shadow-md hover:bg-gray-500 transition duration-300 hidden">
+                            Cancel Edit
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Post List for Admin -->
+            <div class="p-6 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Your Posts</h3>
+                <div id="adminPostsList" class="space-y-4">
+                    <!-- Admin posts will be loaded here dynamically -->
+                    <div id="loadingAdminPosts" class="text-center text-gray-500 text-lg">Loading your posts...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Custom Modal for Alerts/Confirmations -->
+        <div id="customModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 hidden">
+            <div class="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full text-center">
+                <h3 id="modalTitle" class="text-xl font-bold mb-4 text-gray-900"></h3>
+                <p id="modalMessage" class="text-gray-700 mb-6"></p>
+                <div class="flex justify-center space-x-4">
+                    <button id="modalConfirmBtn" class="bg-red-600 text-white px-6 py-3 rounded-full shadow-md hover:bg-red-700 transition duration-300 hidden">Confirm</button>
+                    <button id="modalCloseBtn" class="bg-blue-600 text-white px-6 py-3 rounded-full shadow-md hover:bg-blue-700 transition duration-300">Close</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-4 text-center rounded-t-lg mt-8">
+        <p>&copy; 2025 My Awesome Blog. All rights reserved.</p>
+    </footer>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Firebase imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot, setDoc, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables for Firebase config and app ID
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Firebase App and Services
+        let app;
+        let db;
+        let auth;
+        let userId = 'anonymous'; // Default to anonymous until authenticated
+        let isAuthReady = false; // Flag to indicate if auth state has been checked
+        let isAdminLoggedIn = false; // Flag for admin panel access
+
+        // DOM Elements
+        const blogView = document.getElementById('blogView');
+        const adminPanel = document.getElementById('adminPanel');
+        const adminLoginSection = document.getElementById('adminLoginSection');
+        const viewBlogBtn = document.getElementById('viewBlogBtn');
+        const adminLoginBtn = document.getElementById('adminLoginBtn');
+        const blogPostsContainer = document.getElementById('blogPostsContainer');
+        const loadingBlogPosts = document.getElementById('loadingBlogPosts');
+        const postForm = document.getElementById('postForm');
+        const postTitleInput = document.getElementById('postTitle');
+        const postContentInput = document.getElementById('postContent');
+        const savePostBtn = document.getElementById('savePostBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const postFormTitle = document.getElementById('postFormTitle');
+        const adminPostsList = document.getElementById('adminPostsList');
+        const loadingAdminPosts = document.getElementById('loadingAdminPosts');
+        const currentUserIdDisplay = document.getElementById('currentUserId');
+        const generateContentBtn = document.getElementById('generateContentBtn');
+        const generateSpinner = document.getElementById('generateSpinner');
+
+        // Login Form Elements
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        // Modal Elements
+        const customModal = document.getElementById('customModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+        let editingPostId = null; // To store the ID of the post being edited
+
+        /**
+         * Displays a custom modal message.
+         * @param {string} title - The title of the modal.
+         * @param {string} message - The message content.
+         * @param {boolean} isConfirm - If true, shows a confirm button.
+         * @returns {Promise<boolean>} - Resolves true if confirmed, false if closed/cancelled.
+         */
+        function showModal(title, message, isConfirm = false) {
+            return new Promise((resolve) => {
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+                customModal.classList.remove('hidden');
+
+                if (isConfirm) {
+                    modalConfirmBtn.classList.remove('hidden');
+                    modalConfirmBtn.onclick = () => {
+                        customModal.classList.add('hidden');
+                        modalConfirmBtn.classList.add('hidden'); // Hide for next time
+                        resolve(true);
+                    };
+                    modalCloseBtn.textContent = 'Cancel';
+                } else {
+                    modalConfirmBtn.classList.add('hidden');
+                    modalCloseBtn.textContent = 'Close';
+                }
+
+                modalCloseBtn.onclick = () => {
+                    customModal.classList.add('hidden');
+                    modalConfirmBtn.classList.add('hidden'); // Hide for next time
+                    resolve(false);
+                };
+            });
+        }
+
+        /**
+         * Initializes Firebase and sets up authentication.
+         */
+        async function initializeFirebase() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Attempt to sign in with custom token first
+                if (initialAuthToken) {
+                    try {
+                        console.log("Attempting to sign in with custom token...");
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        console.log("Signed in with custom token successfully.");
+                    } catch (tokenError) {
+                        console.error("Error signing in with custom token:", tokenError);
+                        showModal('Authentication Error', `Failed to sign in with custom token: ${tokenError.message}. Attempting anonymous sign-in.`);
+                        // Fallback to anonymous sign-in if custom token fails
+                        try {
+                            console.log("Attempting anonymous sign-in as fallback...");
+                            await signInAnonymously(auth);
+                            console.log("Signed in anonymously as fallback.");
+                        } catch (anonFallbackError) {
+                            console.error("Error signing in anonymously as fallback:", anonFallbackError);
+                            userId = 'anonymous_auth_failed';
+                            showModal('Authentication Error', `Failed to sign in anonymously: ${anonFallbackError.message}`);
+                        }
+                    }
+                } else {
+                    // If no custom token, sign in anonymously
+                    try {
+                        console.log("No custom token, attempting anonymous sign-in...");
+                        await signInAnonymously(auth);
+                        console.log("Signed in anonymously.");
+                    } catch (anonError) {
+                        console.error("Error signing in anonymously:", anonError);
+                        userId = 'anonymous_auth_failed';
+                        showModal('Authentication Error', `Failed to sign in anonymously: ${anonError.message}`);
+                    }
+                }
+
+                // Listen for auth state changes to set userId and isAuthReady
+                onAuthStateChanged(auth, (user) => {
+                    console.log("onAuthStateChanged fired. User:", user);
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Current user ID:", userId);
+                    } else {
+                        // This case should ideally not be hit if anonymous sign-in worked
+                        // but provides a safety net if user becomes null for some reason.
+                        userId = 'unauthenticated';
+                        console.log("User is unauthenticated.");
+                    }
+                    currentUserIdDisplay.textContent = userId;
+                    isAuthReady = true;
+                    // Once auth is ready, set up listeners
+                    setupFirestoreListeners();
+                });
+
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                showModal('Error', `Failed to initialize Firebase: ${error.message}`);
+            }
+        }
+
+        /**
+         * Sets up real-time listeners for blog posts in Firestore.
+         */
+        function setupFirestoreListeners() {
+            console.log("Attempting to setup Firestore listeners. db:", !!db, "isAuthReady:", isAuthReady, "userId:", userId);
+            if (!db || !isAuthReady) {
+                console.log("Firestore or Auth not ready, skipping listener setup.");
+                return;
+            }
+            if (userId === 'anonymous_auth_failed' || userId === 'unauthenticated') {
+                console.log("Authentication failed or user is unauthenticated, skipping Firestore listeners.");
+                loadingBlogPosts.textContent = 'Authentication failed. Cannot load posts.';
+                loadingAdminPosts.textContent = 'Authentication failed. Cannot load your posts.';
+                return;
+            }
+
+
+            // Public posts for blog view
+            const publicPostsCollectionRef = collection(db, `artifacts/${appId}/public/data/posts`);
+            console.log("Setting up public posts listener for path:", publicPostsCollectionRef.path);
+            onSnapshot(publicPostsCollectionRef, (snapshot) => {
+                console.log("Public posts snapshot received.");
+                const posts = [];
+                snapshot.forEach(doc => {
+                    posts.push({ id: doc.id, ...doc.data() });
+                });
+                // Sort posts by timestamp in descending order
+                posts.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+                displayBlogPosts(posts);
+                loadingBlogPosts.classList.add('hidden');
+            }, (error) => {
+                console.error("Error fetching public blog posts:", error);
+                showModal('Error', `Failed to load blog posts: ${error.message}`);
+                loadingBlogPosts.textContent = 'Failed to load posts.';
+            });
+
+            // Private posts for admin panel (filtered by userId)
+            // IMPORTANT: Adding a 'where' clause here to filter by authorId directly in the query.
+            // This aligns better with security rules that might enforce user-specific access.
+            const adminPostsCollectionRef = collection(db, `artifacts/${appId}/public/data/posts`);
+            // Only set up admin listener if the user is authenticated and potentially an admin
+            // The `where` clause ensures only posts by the current Firebase userId are fetched.
+            // The `isAdminLoggedIn` flag will control UI visibility and write access.
+            const q = query(adminPostsCollectionRef, where("authorId", "==", userId));
+            console.log("Setting up admin posts listener for path:", adminPostsCollectionRef.path, "with userId filter:", userId);
+            onSnapshot(q, (snapshot) => { // Listen to the filtered query
+                console.log("Admin posts snapshot received for userId:", userId);
+                const adminPosts = [];
+                snapshot.forEach(doc => {
+                    adminPosts.push({ id: doc.id, ...doc.data() }); // No need for manual filtering here
+                });
+                // Sort posts by timestamp in descending order
+                adminPosts.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+                displayAdminPosts(adminPosts);
+                loadingAdminPosts.classList.add('hidden');
+            }, (error) => {
+                console.error("Error fetching admin blog posts:", error);
+                showModal('Error', `Failed to load your posts: ${error.message}`);
+                loadingAdminPosts.textContent = 'Failed to load your posts.';
+            });
+        }
+
+        /**
+         * Renders blog posts on the main blog view.
+         * @param {Array<Object>} posts - Array of blog post objects.
+         */
+        function displayBlogPosts(posts) {
+            blogPostsContainer.innerHTML = ''; // Clear existing posts
+            if (posts.length === 0) {
+                blogPostsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500 text-lg">No blog posts published yet.</p>';
+                return;
+            }
+            posts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden';
+                const date = post.timestamp ? new Date(post.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
+                const author = post.author || 'Anonymous';
+
+                // Basic Markdown-like rendering for content
+                const formattedContent = post.content
+                    .replace(/^#\s(.+)$/gm, '<h1>$1</h1>') // H1
+                    .replace(/^##\s(.+)$/gm, '<h2>$1</h2>') // H2
+                    .replace(/^###\s(.+)$/gm, '<h3>$1</h3>') // H3
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
+                    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-blue-600 hover:underline">$1</a>') // Links
+                    .replace(/^- (.*)$/gm, '<li>$1</li>') // Unordered list items
+                    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>') // Wrap list items in ul
+                    .replace(/`([^`]+)`/g, '<code>$1</code>') // Inline code
+                    .replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>'); // Code blocks
+
+                postElement.innerHTML = `
+                    <div class="p-6">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">${post.title}</h3>
+                        <p class="text-sm text-gray-500 mb-4">By ${author} on ${date}</p>
+                        <div class="blog-post-content markdown-content text-gray-700">
+                            ${formattedContent}
+                        </div>
+                    </div>
+                `;
+                blogPostsContainer.appendChild(postElement);
+            });
+        }
+
+        /**
+         * Renders blog posts in the admin panel with edit/delete options.
+         * @param {Array<Object>} posts - Array of blog post objects.
+         */
+        function displayAdminPosts(posts) {
+            adminPostsList.innerHTML = ''; // Clear existing posts
+            if (posts.length === 0) {
+                adminPostsList.innerHTML = '<p class="text-center text-gray-500 text-lg">You have not published any posts yet.</p>';
+                return;
+            }
+            posts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'flex items-center justify-between bg-white p-4 rounded-md shadow-sm border border-gray-200';
+                const date = post.timestamp ? new Date(post.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
+
+                postElement.innerHTML = `
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-800">${post.title}</h4>
+                        <p class="text-sm text-gray-500">Published: ${date}</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="edit-btn bg-yellow-500 text-white px-4 py-2 rounded-full text-sm hover:bg-yellow-600 transition duration-300" data-id="${post.id}">Edit</button>
+                        <button class="delete-btn bg-red-500 text-white px-4 py-2 rounded-full text-sm hover:bg-red-600 transition duration-300" data-id="${post.id}">Delete</button>
+                    </div>
+                `;
+                adminPostsList.appendChild(postElement);
+            });
+
+            // Add event listeners for edit and delete buttons
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.onclick = (e) => editPost(e.target.dataset.id);
+            });
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.onclick = (e) => deletePost(e.target.dataset.id);
+            });
+        }
+
+        /**
+         * Handles saving a new post or updating an existing one.
+         * @param {Event} e - The form submission event.
+         */
+        async function handlePostSubmission(e) {
+            e.preventDefault();
+            if (!db || !auth.currentUser || !isAdminLoggedIn) { // Added isAdminLoggedIn check
+                showModal('Access Denied', 'You must be logged in as an admin to perform this action.');
+                return;
+            }
+
+            const title = postTitleInput.value.trim();
+            const content = postContentInput.value.trim();
+
+            if (!title || !content) {
+                showModal('Validation Error', 'Please fill in both title and content.');
+                return;
+            }
+
+            savePostBtn.disabled = true;
+            savePostBtn.textContent = editingPostId ? 'Updating...' : 'Publishing...';
+
+            try {
+                const postData = {
+                    title: title,
+                    content: content,
+                    timestamp: new Date(),
+                    author: auth.currentUser.isAnonymous ? 'Anonymous' : auth.currentUser.email || 'Admin', // More robust author name needed for production
+                    authorId: userId // Store the user ID for filtering in admin panel
+                };
+
+                // Collection path for public data
+                const postsCollectionRef = collection(db, `artifacts/${appId}/public/data/posts`);
+
+                if (editingPostId) {
+                    // Update existing post
+                    const postDocRef = doc(db, postsCollectionRef.path, editingPostId);
+                    await updateDoc(postDocRef, postData);
+                    showModal('Success', 'Blog post updated successfully!');
+                } else {
+                    // Add new post
+                    await addDoc(postsCollectionRef, postData);
+                    showModal('Success', 'New blog post published successfully!');
+                }
+
+                // Clear form and reset state
+                postForm.reset();
+                editingPostId = null;
+                postFormTitle.textContent = 'Add New Post';
+                savePostBtn.textContent = 'Publish Post';
+                cancelEditBtn.classList.add('hidden');
+
+            } catch (error) {
+                console.error("Error saving post:", error);
+                showModal('Error', `Failed to save post: ${error.message}`);
+            } finally {
+                savePostBtn.disabled = false;
+            }
+        }
+
+        /**
+         * Fills the form with post data for editing.
+         * @param {string} postId - The ID of the post to edit.
+         */
+        async function editPost(postId) {
+            if (!db || !auth.currentUser || !isAdminLoggedIn) { // Added auth.currentUser check
+                showModal('Access Denied', 'You must be logged in as an admin to perform this action.');
+                return;
+            }
+            const postsCollectionRef = collection(db, `artifacts/${appId}/public/data/posts`);
+            const postDocRef = doc(db, postsCollectionRef.path, postId);
+
+            try {
+                // Fetching all docs and filtering client-side for simplicity,
+                // but for large datasets, a direct getDoc(postDocRef) would be more efficient
+                // if security rules allow direct access based on doc ID and user ID.
+                const snapshot = await getDocs(query(postsCollectionRef));
+                const postToEdit = snapshot.docs.find(doc => doc.id === postId);
+
+                if (postToEdit && postToEdit.data().authorId === userId) {
+                    const data = postToEdit.data();
+                    postTitleInput.value = data.title;
+                    postContentInput.value = data.content;
+                    editingPostId = postId;
+                    postFormTitle.textContent = 'Edit Post';
+                    savePostBtn.textContent = 'Update Post';
+                    cancelEditBtn.classList.remove('hidden');
+                    // Scroll to form
+                    postForm.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    showModal('Access Denied', 'You can only edit your own posts.');
+                }
+            } catch (error) {
+                console.error("Error fetching post for edit:", error);
+                showModal('Error', `Failed to load post for editing: ${error.message}`);
+            }
+        }
+
+        /**
+         * Deletes a blog post.
+         * @param {string} postId - The ID of the post to delete.
+         */
+        async function deletePost(postId) {
+            if (!db || !auth.currentUser || !isAdminLoggedIn) { // Added auth.currentUser check
+                showModal('Access Denied', 'You must be logged in as an admin to perform this action.');
+                return;
+            }
+
+            const confirmDelete = await showModal('Confirm Deletion', 'Are you sure you want to delete this post? This action cannot be undone.', true);
+            if (!confirmDelete) {
+                return;
+            }
+
+            const postsCollectionRef = collection(db, `artifacts/${appId}/public/data/posts`);
+            const postDocRef = doc(db, postsCollectionRef.path, postId);
+
+            try {
+                // Fetching all docs and filtering client-side for simplicity,
+                // but for large datasets, a direct getDoc(postDocRef) would be more efficient
+                const snapshot = await getDocs(query(postsCollectionRef));
+                const postToDelete = snapshot.docs.find(doc => doc.id === postId);
+
+                if (postToDelete && postToDelete.data().authorId === userId) {
+                    await deleteDoc(postDocRef);
+                    showModal('Success', 'Blog post deleted successfully!');
+                } else {
+                    showModal('Access Denied', 'You can only delete your own posts.');
+                }
+            } catch (error) {
+                console.error("Error deleting post:", error);
+                showModal('Error', `Failed to delete post: ${error.message}`);
+            }
+        }
+
+        /**
+         * Generates blog post content using the Gemini API.
+         */
+        async function generateContent() {
+            const prompt = `Write a short, engaging blog post (around 200-300 words) on the topic: "${postTitleInput.value || 'a general interesting topic'}". Include an introduction, a few paragraphs of body content, and a conclusion. Use simple Markdown formatting (like **bold**, *italic*, # headings, - lists, and [links](https://example.com)).`;
+
+            if (!prompt) {
+                showModal('Input Required', 'Please enter a title before generating content.');
+                return;
+            }
+
+            generateContentBtn.disabled = true;
+            generateSpinner.classList.remove('hidden');
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // Canvas will provide this key at runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    postContentInput.value = text;
+                } else {
+                    showModal('AI Generation Failed', 'Could not generate content. Please try again.');
+                    console.error("Gemini API response structure unexpected:", result);
+                }
+            } catch (error) {
+                console.error("Error generating content:", error);
+                showModal('AI Generation Error', `Error generating content: ${error.message}. Please try again.`);
+            } finally {
+                generateContentBtn.disabled = false;
+                generateSpinner.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Handles the admin login attempt.
+         * @param {Event} e - The form submission event.
+         */
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
+            // Hardcoded credentials for demonstration
+            if (username === 'shamsdoha' && password === 'admin') {
+                isAdminLoggedIn = true;
+                adminLoginSection.classList.add('hidden');
+                adminPanel.classList.remove('hidden');
+                showModal('Login Successful', 'Welcome to the Admin Panel!');
+                // Re-setup listeners to ensure admin posts are filtered correctly
+                // (though onAuthStateChanged already handles this, good to be explicit for clarity)
+                setupFirestoreListeners();
+            } else {
+                showModal('Login Failed', 'Invalid username or password.');
+            }
+            loginForm.reset();
+        }
+
+        // Event Listeners
+        viewBlogBtn.addEventListener('click', () => {
+            blogView.classList.remove('hidden');
+            adminLoginSection.classList.add('hidden'); // Hide login if visible
+            adminPanel.classList.add('hidden'); // Hide admin panel if visible
+        });
+
+        adminLoginBtn.addEventListener('click', () => {
+            blogView.classList.add('hidden');
+            adminPanel.classList.add('hidden'); // Hide admin panel first
+            adminLoginSection.classList.remove('hidden'); // Show login form
+        });
+
+        loginForm.addEventListener('submit', handleAdminLogin);
+        postForm.addEventListener('submit', handlePostSubmission);
+
+        cancelEditBtn.addEventListener('click', () => {
+            postForm.reset();
+            editingPostId = null;
+            postFormTitle.textContent = 'Add New Post';
+            savePostBtn.textContent = 'Publish Post';
+            cancelEditBtn.classList.add('hidden');
+        });
+
+        generateContentBtn.addEventListener('click', generateContent);
+
+        // Initialize Firebase when the window loads
+        window.onload = initializeFirebase;
+    </script>
+</body>
+</html>
